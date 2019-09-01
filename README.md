@@ -1,0 +1,1 @@
+# Auto_Pick_QR_Object
