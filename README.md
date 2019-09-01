@@ -13,7 +13,7 @@
 ### A、下载，编译
 
 ```shell
-git clone 
+git clone https://github.com/JTDQ/Auto_Pick_QR_Object.git
 cd catkin_ws/src
 catkin_make
 ```
