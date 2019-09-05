@@ -411,9 +411,38 @@ def main():
             def gripper_response_cb(userdata, response):
                 rospy.sleep(1.)
                 return 'succeeded'
+#       如果align环节abort，为避免设置同样的初始位置，就进入这个位置。
+#       然后这个位置如果abort 就进入 init 的出事位置
+            pick_center.userdata.abort_position = [0.0, -0.55, 1.10, -0.44]
+            smach.StateMachine.add('SET_Abort_POSITION',
+                                    ServiceState(planning_group + '/moveit/set_joint_position',
+                                                    SetJointPosition,
+                                                    request_cb=joint_position_request_cb,
+                                                    response_cb=joint_position_response_cb,
+                                                    input_keys=['input_planning_group',
+                                                                'input_position']),
+                                   transitions={'succeeded':'ABort_OPEN_GRIPPER'},
+                                   remapping={'input_planning_group':'planning_group',
+                                            'input_position':'abort_position'})
+            pick_center.userdata.open_gripper = [0.005]
+            smach.StateMachine.add('ABort_OPEN_GRIPPER',
+                                    ServiceState(namespace + '/gripper',
+                                                    SetJointPosition,
+                                                    request_cb=gripper_request_cb,
+                                                    response_cb=gripper_response_cb,
+                                                    input_keys=['input_planning_group',
+                                                                'input_gripper']),
+                                   transitions={'succeeded':'ABort_GET_POSE_OF_THE_OBJECT'},
+                                   remapping={'input_planning_group':'planning_group',
+                                            'input_gripper':'open_gripper'})
 
+            pick_center.userdata.object_pose = Pose()
+            smach.StateMachine.add('ABort_GET_POSE_OF_THE_OBJECT', getPoseOfTheObject(),
+                                    transitions={'succeeded':'ALIGN_ARM_WITH_OBJECT',
+                                                'aborted':'SET_INIT_POSITION'},
+                                    remapping={'output_object_pose':'object_pose'})
+#       这里设置正常的init position， 对齐不成功，再进入 abort的init position
             pick_center.userdata.init_position = [0.0, -0.65, 1.20, -0.54]
-
             smach.StateMachine.add('SET_INIT_POSITION',
                                     ServiceState(planning_group + '/moveit/set_joint_position',
                                                     SetJointPosition,
@@ -440,9 +469,9 @@ def main():
             pick_center.userdata.object_pose = Pose()
             smach.StateMachine.add('GET_POSE_OF_THE_OBJECT', getPoseOfTheObject(),
                                     transitions={'succeeded':'ALIGN_ARM_WITH_OBJECT',
-                                                'aborted':'aborted'},
+                                                'aborted':'SET_Abort_POSITION'},
                                     remapping={'output_object_pose':'object_pose'})
-
+#          对齐后的流程照旧
             pick_center.userdata.align_arm_with_object_tolerance = 0.01
             smach.StateMachine.add('ALIGN_ARM_WITH_OBJECT',
                                     ServiceState(planning_group + '/moveit/set_kinematics_pose',
