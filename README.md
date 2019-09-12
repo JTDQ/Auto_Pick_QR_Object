@@ -37,6 +37,14 @@ roslaunch auto_pick_sc sc_task_controller.launch
 
 #### （2）如果你是用usb相机
 
+先在树莓派上运行：
+
+```
+roslaunch turtlebot3_bringup turtlebot3_rpicamera.launch 
+```
+
+然后在远程PC上运行
+
 ```shell
 # turtlebot3，机械臂moveit，ar_tracker
 roslaunch auto_pick_sc follow_ar.launch
