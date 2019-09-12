@@ -26,12 +26,25 @@ catkin_make
 
 ### C、运行
 
+#### (1)如果你用的是树莓派相机，
+
+```shell
+# turtlebot3，机械臂moveit，ar_tracker
+roslaunch auto_pick_sc raspicamera_ar_tracker.launch
+# 任务控制节点
+roslaunch auto_pick_sc sc_task_controller.launch
+```
+
+#### （2）如果你是用usb相机
+
 ```shell
 # turtlebot3，机械臂moveit，ar_tracker
 roslaunch auto_pick_sc follow_ar.launch
 # 任务控制节点
 roslaunch auto_pick_sc sc_task_controller.launch
 ```
+
+
 
 # 3、移动抓取包内文件解释
 
