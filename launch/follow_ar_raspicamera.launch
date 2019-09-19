@@ -4,10 +4,10 @@
 -->
 	<group ns="om_with_tb3">
 		<include file="$(find auto_pick_sc)/launch/raspicamera_ar_tracker.launch"/>
-		<include file="$(find turtlebot3_bringup)/launch/turtlebot3_robot.launch">
+		<!-- <include file="$(find turtlebot3_bringup)/launch/turtlebot3_robot.launch">
 			<arg name="multi_robot_name" value="om_with_tb3"/>
 			<arg name="set_lidar_frame_id" value="om_with_tb3/base_scan"/>				
-		</include>
+		</include> -->
 	</group>
 	<include file="$(find open_manipulator_with_tb3_tools)/launch/manipulation.launch">
 		<arg name="use_platform" value="true"/>

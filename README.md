@@ -26,7 +26,17 @@ catkin_make
 
 ### C、运行
 
-#### (1)如果你用的是树莓派相机，
+#### 方案一，如果你用的是树莓派相机，
+
+先在树莓派上运行：
+
+```
+roslaunch turtlebot3_bringup turtlebot3_rpicamera.launch 
+
+ROS_NAMESPACE=om_with_tb3 roslaunch turtlebot3_bringup turtlebot3_robot.launch multi_robot_name:=om_with_tb3 set_lidar_frame_id:=om_with_tb3/base_scan 
+```
+
+然后，在PC电脑上运行：
 
 ```shell
 # turtlebot3，机械臂moveit，ar_tracker
@@ -35,13 +45,7 @@ roslaunch auto_pick_sc raspicamera_ar_tracker.launch
 roslaunch auto_pick_sc sc_task_controller.launch
 ```
 
-#### （2）如果你是用usb相机
-
-先在树莓派上运行：
-
-```
-roslaunch turtlebot3_bringup turtlebot3_rpicamera.launch 
-```
+#### 方案二，如果你是用usb相机
 
 然后在远程PC上运行
 
