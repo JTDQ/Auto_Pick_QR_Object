@@ -84,11 +84,27 @@ roslaunch auto_pick_sc sc_task_controller.launch
 
 
 
-# 5、相机没标定的按照下面流程标定
+# 5、tb3遥控操作机械臂
+
+7多点巡航 <https://blog.csdn.net/baimei4833953/article/details/82928549>
+
+# 6、相机没标定的按照下面流程标定
 
 **准备标定板**
 
 下载标定板：<http://wiki.ros.org/camera_calibration/Tutorials/MonocularCalibration?action=AttachFile&do=get&target=check-108.pdf>
+
+操作步骤
+
+```
+# 地图构建
+# 发布机器人bring，navigation， 
+# 发布多点巡航  
+# 修改launch文件中的三个点的坐标系。
+$ roslaunch auto_pick_sc n_points.launch 
+```
+
+
 
 贴到一个
 
