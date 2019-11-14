@@ -41,7 +41,9 @@
 #include <turtlebot3_msgs/VersionInfo.h>
 
 #include <TurtleBot3.h>
+#include <RC100.h>
 #include "turtlebot3_with_open_manipulator.h"
+#include "remote_controller.h"
 
 #include <math.h>
 
@@ -83,7 +85,7 @@ void gripperMoveTimeCallback(const std_msgs::Float64& time_msg);
 void soundCallback(const turtlebot3_msgs::Sound& sound_msg);
 void motorPowerCallback(const std_msgs::Bool& power_msg);
 void resetCallback(const std_msgs::Empty& reset_msg);
-
+void getData(uint32_t wait_time);
 // Function prototypes
 void publishCmdVelFromRC100Msg(void);
 void publishImuMsg(void);
@@ -266,5 +268,75 @@ uint8_t battery_state = 0;
 *******************************************************************************/
 bool is_moving        = false;
 std_msgs::Float64MultiArray joint_trajectory_point;
+/*******************************************************************************
+* RC100
 
+
+RC100 rc100;
+double grip_value = 0.0;
+
+void connectRC100()
+{
+  rc100.begin(1);
+}
+
+int availableRC100()
+{
+  return rc100.available();
+}
+
+uint16_t readRC100Data()
+{
+  return rc100.readData();
+}
+
+void fromRC100(OpenManipulatorDriver* open_manipulator,float *goal_velocity_from_rc100, uint16_t data)
+{
+  //void RobotisManipulator::makeJointTrajectoryFromPresentPosition(std::vector<double> delta_goal_joint_position, double move_time, std::vector<JointValue> present_joint_value)
+  double pose[]={0.0, 0.0, 0.0, 0.0, 0.0};
+
+  if (!(data & RC100_BTN_6)) {
+    if (data & RC100_BTN_L){
+      pose[0]=3*DEG2RAD;
+    }
+    else if (data & RC100_BTN_R){
+      pose[0]=-3*DEG2RAD;
+    }else if (data & RC100_BTN_D){
+      pose[1]=3*DEG2RAD;
+    }else if (data & RC100_BTN_U){
+      pose[1]=-3*DEG2RAD;
+    }else if (data & RC100_BTN_3){
+      pose[2]=3*DEG2RAD;
+    }else if (data & RC100_BTN_1){
+      pose[2]=-3*DEG2RAD;
+    }else if (data & RC100_BTN_4)
+    {
+      pose[3]=3*DEG2RAD;
+    }else if (data & RC100_BTN_2)
+    {
+      pose[3]=-3*DEG2RAD;
+    }
+  } else {
+    // float goal_velocity_from_rc100[WHEEL_NUM] = {0.0, 0.0};
+    if (data & RC100_BTN_U)
+      goal_velocity_from_rc100[0]=0.2;
+    else if (data & RC100_BTN_D)
+      goal_velocity_from_rc100[0]=-0.2;      
+    else if (data & RC100_BTN_L)
+      goal_velocity_from_rc100[1]=0.2;
+    else if (data & RC100_BTN_R)
+      goal_velocity_from_rc100[1]=-0.2;
+    else if(data & RC100_BTN_5){
+      goal_velocity_from_rc100[0]=0;
+      goal_velocity_from_rc100[1]=0;
+    }else if(data & RC100_BTN_2){
+      pose[4]=0.01;
+    }else if(data & RC100_BTN_2){
+      pose[4]=-0.01;
+    }
+    
+  }
+  open_manipulator->currentBasedPos(pose);
+}
+*******************************************************************************/
 #endif // TURTLEBOT3_WITH_OPEN_MANIPULATOR_CONFIG_H_

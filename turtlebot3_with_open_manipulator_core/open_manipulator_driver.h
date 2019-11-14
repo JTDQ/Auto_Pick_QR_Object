@@ -56,6 +56,7 @@ class OpenManipulatorDriver
   bool getVelocity(double *get_data);
   bool getCurrent(double *get_data);
   bool writeJointPosition(double *set_data);
+  bool currentBasedPos(double *pose);
   bool writeJointProfileControlParam(double set_time, double acc = 0.0f);
   bool writeGripperPosition(double *set_data);
   bool writeGripperProfileControlParam(double set_time);

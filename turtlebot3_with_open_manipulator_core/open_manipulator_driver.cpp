@@ -486,6 +486,25 @@ bool OpenManipulatorDriver::writeJointProfileControlParam(double set_time, doubl
 
   return true;
 }
+bool OpenManipulatorDriver::currentBasedPos(double *bias){
+    double sc_joint_position[4];
+    double sc_position[5];
+    getPosition(sc_position);
+    for (size_t i = 0; i < 4; i++)
+    {
+      sc_joint_position[i]=sc_position[i]+bias[i];
+    }
+    
+  double sc_gripper_position[1] = {sc_position[4]+bias[4]};
+
+  writeJointProfileControlParam(0.18f, 0.75f);
+  writeGripperProfileControlParam(0.0f);
+  writeJointPosition(sc_joint_position);  
+  writeGripperPosition(sc_gripper_position);
+
+  // writeJointProfileControlParam(0.0f);
+  // writeGripperProfileControlParam(0.0f);
+}
 
 bool OpenManipulatorDriver::writeJointPosition(double *set_data)
 {
@@ -493,11 +512,13 @@ bool OpenManipulatorDriver::writeJointPosition(double *set_data)
   bool result = false;
   const uint8_t HANDLER_INDEX = 0;
   int32_t goal_position[joint_.cnt];
-
+  
   for (int num = 0; num < joint_.cnt; num++)
   {
     goal_position[num] = dxl_wb_.convertRadian2Value(joint_.id[num], set_data[num]);
+
   }
+
 
   result = dxl_wb_.syncWrite(HANDLER_INDEX, joint_.id, joint_.cnt, &goal_position[0], 1, &log);
   if (result == false)

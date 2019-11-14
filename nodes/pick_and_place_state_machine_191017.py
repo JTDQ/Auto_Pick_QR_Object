@@ -37,6 +37,8 @@ class getPoseOfTheObject(smach.State):
 
         self.namespace = rospy.get_param("~robot_name")
         self.marker_pose_sub = rospy.Subscriber(self.namespace + '/ar_pose_marker', AlvarMarkers, self.arMarkerMsgCallback)
+        # self.marker_pose_sub = rospy.Subscriber(
+        #     'ar_pose_marker', AlvarMarkers, self.arMarkerMsgCallback)
         self.ball_pose=rospy.Subscriber("/ball_pose",Vector3,self.ball_pose_callBack)
         self.OFFSET_FOR_GOAL_HEIGHT = 0.130
         self.ar_marker_pose = False
@@ -44,6 +46,7 @@ class getPoseOfTheObject(smach.State):
         self.ball_pos=None
 
     def arMarkerMsgCallback(self, ar_marker_pose_msg):
+
         if len(ar_marker_pose_msg.markers) == 0:
             if self.ar_marker_pose != False and self.canot_find_times < 3:
                 self.canot_find_times += 1
@@ -53,6 +56,7 @@ class getPoseOfTheObject(smach.State):
         else:
             self.ar_marker_pose = AlvarMarker()
             self.ar_marker_pose = ar_marker_pose_msg.markers[0]
+            
             # rospy.loginfo("FIND AR POSE")
     def ball_pose_callBack(self,data):
         self.ball_pos=data
@@ -62,6 +66,11 @@ class getPoseOfTheObject(smach.State):
             return 'aborted'
         else:
             object_pose = Pose()
+            # object_pose.position = self.ar_marker_pose.pose.pose.position
+ 
+            # object_pose.position.x =self.ar_marker_pose.pose.pose.position.z+ 0.0
+            # object_pose.position.y  =-self.ar_marker_pose.pose.pose.position.x +0.0
+            # object_pose.position.z =-self.ar_marker_pose.pose.pose.position.y + self.OFFSET_FOR_GOAL_HEIGHT
             object_pose.position.x =self.ar_marker_pose.pose.pose.position.x+ 0.0
             object_pose.position.y  =self.ar_marker_pose.pose.pose.position.y +0.0
             object_pose.position.z =0.250 #self.ar_marker_pose.pose.pose.position.z + self.OFFSET_FOR_GOAL_HEIGHT
@@ -129,6 +138,11 @@ class getCloserToGoal(smach.State):
 
     def execute(self, userdata):
         while 1:
+            # rospy.loginfo('ar_marker_pose.x : %f', self.ar_marker_pose.pose.pose.position.x)
+            # rospy.loginfo('ar_marker_pose.y : %f', self.ar_marker_pose.pose.pose.position.y)
+            # rospy.loginfo('ar_marker_pose.z : %f', self.ar_marker_pose.pose.pose.position.z)
+            # rospy.loginfo('ar_marker_pose.yaw : %f', math.degrees(self.getAngleBtwRobotAndMarker(self.ar_marker_pose)))
+
             if self.ar_marker_pose == False:
                 rospy.loginfo('Failed to get pose of the marker')
 
@@ -167,6 +181,106 @@ class getCloserToGoal(smach.State):
             self.priv_dist = dist
             self.priv_heading = heading
 
+# class getCloserToGoal(smach.State):
+#     def __init__(self):
+#         smach.State.__init__(self, outcomes=['succeeded', 'failed'])
+
+#         self.namespace = rospy.get_param("~robot_name")
+#         self.marker_pose_sub = rospy.Subscriber(self.namespace + '/ar_pose_marker', AlvarMarkers, self.arMarkerMsgCallback)
+#         self.odom_sub = rospy.Subscriber(self.namespace + '/odom', Odometry, self.odomMsgCallback)
+#         self.cmd_vel_pub = rospy.Publisher(self.namespace + '/cmd_vel', Twist, queue_size=10)
+#         self.tb3_odom = Odometry()
+
+#         self.cmd_vel = Twist()
+
+#         self.priv_dist = 0.0
+#         self.priv_heading = 0.0
+#         self.ar_marker_pose =False
+
+#     def arMarkerMsgCallback(self, ar_marker_pose_msg):
+#         if len(ar_marker_pose_msg.markers) == 0:
+#             self.ar_marker_pose = False
+#         else:            
+#             self.ar_marker_pose = AlvarMarker()
+#             self.ar_marker_pose = ar_marker_pose_msg.markers[0]
+#             # rospy.loginfo('get a ar')
+
+#     def odomMsgCallback(self, odom_msg):       
+#         self.tb3_odom = odom_msg
+
+#     def getDistanceFromRobot(self, goal):
+#         return sqrt(goal.pose.pose.position.x**2+goal.pose.pose.position.y**2)
+              
+#     def getAngleBtwRobotAndMarker(self, goal):
+#         return math.atan2(goal.pose.pose.position.y, goal.pose.pose.position.x)
+
+#     def execute(self, userdata):
+#         while 1:
+#             # rospy.loginfo('ar_marker_pose.x : %f', self.ar_marker_pose.pose.pose.position.x)
+#             # rospy.loginfo('ar_marker_pose.y : %f', self.ar_marker_pose.pose.pose.position.y)
+#             # rospy.loginfo('ar_marker_pose.z : %f', self.ar_marker_pose.pose.pose.position.z)
+#             # rospy.loginfo('ar_marker_pose.yaw : %f', math.degrees(self.getAngleBtwRobotAndMarker(self.ar_marker_pose)))
+
+#             if self.ar_marker_pose == False:
+#                 # rospy.loginfo('Failed to get pose of the marker')
+#                 self.cmd_vel.linear.x  = 0.0
+#                 self.cmd_vel.angular.z = 0.0
+            
+#                 self.cmd_vel_pub.publish(self.cmd_vel)
+#                 continue
+            
+#             dist    = self.getDistanceFromRobot(self.ar_marker_pose)   # meter
+#             heading = self.getAngleBtwRobotAndMarker(self.ar_marker_pose)       # radian
+#             radius=dist/(2*math.sin(heading))
+#             rad_leng=  2*heading*radius
+#             v= 0.2*dist
+#             t= rad_leng / v
+            
+#             w=2*heading/t 
+#             # if w >0:
+#             #     w=w+0.05
+#             # elif w<0:
+#             #     w=w-0.05
+
+#             if dist > 0.3  :
+#                 self.cmd_vel.linear.x  = v
+#                 self.cmd_vel.angular.z =w
+#             elif heading >0.7 :
+#                 self.cmd_vel.linear.x  = 0
+#                 self.cmd_vel.angular.z =  w
+#             else:
+#                 self.cmd_vel.linear.x  = 0
+#                 self.cmd_vel.angular.z =  0
+#                 return 'succeeded'
+#             self.cmd_vel_pub.publish(self.cmd_vel) 
+#             rospy.loginfo((dist,heading,self.cmd_vel.linear.x,self.cmd_vel.angular.z))
+#             # objective_function = (1.0 * abs(dist)) + (10.0 * abs(heading))        
+
+#             # # rospy.logwarn('dist: %f, heading: %f, obj_func_result: %f', dist, heading, objective_function)
+
+#             # # dist tolerance: 0.170 meter, heading tolerance: +-0.09 rad (+-5.0 deg)
+#             # if objective_function >= 0.210:            
+#             #     self.cmd_vel.linear.x  = (0.2 * dist) + (0.02 * (dist - self.priv_dist))
+#             #     self.cmd_vel.linear.y  = 0.0 
+#             #     self.cmd_vel.linear.z  = 0.0
+
+#             #     self.cmd_vel.angular.x = 0.0  
+#             #     self.cmd_vel.angular.y = 0.0 
+#             #     self.cmd_vel.angular.z = (1.0 * heading) + (0.01 * (heading - self.priv_heading))
+            
+#             #     self.cmd_vel_pub.publish(self.cmd_vel)
+#             # else:
+#             #     self.cmd_vel.linear.x  = 0.0
+#             #     self.cmd_vel.angular.z = 0.0
+            
+#             #     self.cmd_vel_pub.publish(self.cmd_vel)  
+
+#             #     return 'succeeded'
+
+#             # self.priv_dist = dist
+#             # self.priv_heading = heading
+
+
 
 
 class Go(smach.State):
@@ -194,6 +308,21 @@ def main():
 
     # Open the container
     with task_center:
+        # the_location_of_the_object = MoveBaseGoal()
+        # the_location_of_the_object.target_pose.header.frame_id = "map"
+        # the_location_of_the_object.target_pose.header.stamp    = rospy.Time.now()
+        # the_location_of_the_object.target_pose.pose.position.x = 1.35
+        # the_location_of_the_object.target_pose.pose.position.y = -0.00
+        # the_location_of_the_object.target_pose.pose.position.z = 0.0
+        # the_location_of_the_object.target_pose.pose.orientation.w = 1
+        # the_location_of_the_object.target_pose.pose.orientation.x = 0.0
+        # the_location_of_the_object.target_pose.pose.orientation.y = 0.0
+        # the_location_of_the_object.target_pose.pose.orientation.z = 0.0
+        # smach.StateMachine.add('GO_TO_THE_OBJECT',
+        #                         SimpleActionState(namespace + "/move_base", 
+        #                                         MoveBaseAction,
+        #                                         goal=the_location_of_the_object),
+        #                         transitions={'succeeded':'PICK'})
 
         smach.StateMachine.add('GET_CLOSER_TO_OBJECT', getCloserToGoal(),
                                 transitions={'succeeded':'PICK',

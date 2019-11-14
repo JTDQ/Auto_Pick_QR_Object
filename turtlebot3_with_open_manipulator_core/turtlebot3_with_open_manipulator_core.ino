@@ -1,4 +1,5 @@
 /*******************************************************************************
+* sanchuan dao ci yiyou
 * Copyright 2018 ROBOTIS CO., LTD.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +13,8 @@
 * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 * See the License for the specific language governing permissions and
 * limitations under the License.
-*******************************************************************************/
+******************************************************************************
+*/
 
 /* Authors: Yoonseok Pyo, Leon Jung, Darby Lim, HanCheol Cho */
 
@@ -60,8 +62,8 @@ void setup()
   diagnosis.init();
 
   // Setting for ROBOTIS RC100 remote controller and cmd_vel
-  controllers.init(MAX_LINEAR_VELOCITY, MAX_ANGULAR_VELOCITY);
-
+  // controllers.init(MAX_LINEAR_VELOCITY, MAX_ANGULAR_VELOCITY);
+  connectRC100();
   // Setting for SLAM and navigation (odometry, joint states, TF)
   initOdom();
 
@@ -136,8 +138,8 @@ void loop()
   sendLogMsg();
 
   // Receive data from RC100 
-  controllers.getRCdata(goal_velocity_from_rc100);
-
+  //controllers.getRCdata(goal_velocity_from_rc100);
+  getData(100);
   // Check push button pressed for simple test drive
   driveTest(diagnosis.getButtonPress(3000));
 
@@ -175,7 +177,51 @@ void commandVelocityCallback(const geometry_msgs::Twist& cmd_vel_msg)
   goal_velocity_from_cmd[LINEAR]  = constrain(goal_velocity_from_cmd[LINEAR],  MIN_LINEAR_VELOCITY, MAX_LINEAR_VELOCITY);
   goal_velocity_from_cmd[ANGULAR] = constrain(goal_velocity_from_cmd[ANGULAR], MIN_ANGULAR_VELOCITY, MAX_ANGULAR_VELOCITY);
 }
-
+ /*
+// 先借用以下这个callback函数，
+void commandVelocityCallback(const geometry_msgs::Twist& cmd_vel_msg)
+{
+  double pose[]={cmd_vel_msg.linear.x, cmd_vel_msg.linear.y, cmd_vel_msg.linear.z , 0};
+  manipulator_driver.currentBasedPos(pose);
+ 
+  char log_msg[50];
+  // 读取当前位置值
+  float man_ctrl_pos[10]={0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
+  nh.loginfo("A");
+  // man_ctrl_pos[0]=0.0;
+  // joint_states.position;
+  for(int i=0;i<4;i++){
+    man_ctrl_pos[i+1]=joint_states.position[2+i];
+    man_ctrl_pos[i+6]=joint_states.position[2+i];
+  }
+  man_ctrl_pos[5]=0.2;
+  nh.loginfo("B");
+  // man_ctrl_pos[6]+=cmd_vel_msg.linear.x/100.0;
+  man_ctrl_pos[6]+= 0.27;
+  
+  sprintf(log_msg,"%3.8lf",man_ctrl_pos[6]);
+  // sprintf(log_msg, "");
+  nh.loginfo(log_msg);
+  // man_ctrl_pos[1]+=cmd_vel_msg.angular.z/100.0;
+  // goal_velocity_from_cmd[LINEAR]  = cmd_vel_msg.linear.x;
+  // goal_velocity_from_cmd[ANGULAR] = cmd_vel_msg.angular.z;
+  
+  // joint_trajectory_point.data.clear();
+  // joint_trajectory_point.dim.
+  joint_trajectory_point.data=man_ctrl_pos;
+  nh.loginfo("C");
+  // joint_trajectory_point.layout.joidata_offset=0;
+  
+  // atos()
+  
+    sprintf(log_msg,"%3.8lf",joint_trajectory_point.data[6]);
+  // sprintf(log_msg, "");
+  nh.loginfo(log_msg);
+  // goal_velocity_from_cmd[LINEAR]  = constrain(goal_velocity_from_cmd[LINEAR],  MIN_LINEAR_VELOCITY, MAX_LINEAR_VELOCITY);
+  // goal_velocity_from_cmd[ANGULAR] = constrain(goal_velocity_from_cmd[ANGULAR], MIN_ANGULAR_VELOCITY, MAX_ANGULAR_VELOCITY);
+  
+}
+*/
 /*******************************************************************************
 * Callback function for joint trajectory msg
 *******************************************************************************/
@@ -273,6 +319,46 @@ void publishCmdVelFromRC100Msg(void)
   cmd_vel_rc100_msg.angular.z = goal_velocity_from_rc100[ANGULAR];
 
   cmd_vel_rc100_pub.publish(&cmd_vel_rc100_msg);
+}
+void getData(uint32_t wait_time)
+{
+  static uint8_t state = 0;
+  static uint32_t tick = 0;
+
+  bool rc100_state = false;
+  // bool processing_state = false;
+
+  uint16_t get_rc100_data = 0;
+  // String get_processing_data = "";
+
+  if (availableRC100())
+  {
+    get_rc100_data = readRC100Data();
+    rc100_state = true;
+  }
+
+  switch (state)
+  {
+    case 0:
+      if (rc100_state)
+      {
+        fromRC100(&manipulator_driver,goal_velocity_from_rc100, get_rc100_data);
+        tick = millis();
+        state = 1;
+      }
+     break;
+
+    case 1:
+      if ((millis() - tick) >= wait_time)
+      {
+        state = 0;
+      }
+     break;
+
+    default:
+      state = 0;
+     break;
+  }
 }
 
 /*******************************************************************************
@@ -500,7 +586,7 @@ void updateJointStates(void)
 
   for (uint8_t num = 0; num < (joint_cnt + gripper_cnt); num++)
   {
-    if (num >= joint_cnt)
+    if (num > joint_cnt)
       get_joint_position[num] = get_joint_position[num] * OPEN_MANIPULATOR_GRIPPER_OFFSET;
 
     joint_states_pos[WHEEL_NUM + num] = get_joint_position[num];
@@ -689,7 +775,11 @@ void jointControl(void)
     }
   }
 }
+void get_RC100_and_ctrl_Opnemain(){
+  double goal_joint_position[joint_cnt];
 
+  manipulator_driver.writeJointPosition(goal_joint_position);
+}
 /*******************************************************************************
 * Turtlebot3 test drive using push buttons
 *******************************************************************************/
