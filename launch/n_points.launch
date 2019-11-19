@@ -1,8 +1,12 @@
 <launch>
+<!--
     <node pkg="auto_pick_sc" type="n_point.py" respawn="false" name="n_points" output="screen">
         <param name="goalListX" value="0.5, -0.8, 0.6" />
         <param name="goalListY" value="0, 0.7, 1.5" />
-        <param name="goalListYaw" value="0.0, 90.0, 0" /><!--degree--> 
+        <param name="goalListYaw" value="0.0, 90.0, 0" />
     </node>
+--> 
+    <node pkg="auto_pick_sc" type="rc100_service.py" name="n_points" output="screen"/>
+
 </launch>
 
