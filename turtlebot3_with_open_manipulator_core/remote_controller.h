@@ -18,14 +18,22 @@
 
 #ifndef REMOTE_CONTROLLER_H_
 #define REMOTE_CONTROLLER_H_
+
 // #define DEG2RAD(x) ((x)*0.017453293)
 #define DEG2RAD 0.017453293
 #include <TurtleBot3.h>
 #include <RC100.h>
-
+#include "turtlebot3_with_open_manipulator_core_config.h"
+#include "pitches.h"
 RC100 rc100;
 double grip_value = 0.0;
-uint16_t old_data=0;
+void sing_melody();
+void fromRC100(OpenManipulatorDriver* open_manipulator,float *goal_velocity_from_rc100, uint16_t data,ros::Publisher* rc_partol_pub,std_msgs::Int32* rc_patrol_msg);
+void connectRC100();
+uint16_t readRC100Data();
+int availableRC100();
+
+
 void connectRC100()
 {
   rc100.begin(1);
@@ -41,12 +49,12 @@ uint16_t readRC100Data()
   return rc100.readData();
 }
 
-void fromRC100(OpenManipulatorDriver* open_manipulator,float *goal_velocity_from_rc100, uint16_t data)
+void fromRC100(OpenManipulatorDriver* open_manipulator,float *goal_velocity_from_rc100, uint16_t data,ros::Publisher* rc_partol_pub,std_msgs::Int32* rc_patrol_msg)
 {
-  if(data!=old_data){
-    old_data=data;
-    return;
-  }
+  // if(data!=old_data){
+  //   old_data=data;
+  //   return;
+  // }
   //void RobotisManipulator::makeJointTrajectoryFromPresentPosition(std::vector<double> delta_goal_joint_position, double move_time, std::vector<JointValue> present_joint_value)
   double pose[]={0.0, 0.0, 0.0, 0.0, 0.0};
 
@@ -101,8 +109,53 @@ void fromRC100(OpenManipulatorDriver* open_manipulator,float *goal_velocity_from
     }else if(data & RC100_BTN_4){
       pose[4]=-0.02;
       open_manipulator->currentBasedPos(pose);
+    }else if((data&RC100_BTN_1)){
+      static uint32_t last_partol_time=0;
+      uint32_t t = millis();
+      
+      if(t-last_partol_time>5000){
+        sing_melody();
+        last_partol_time=t;
+        // mag_pub.publish(&mag_msg);
+        if((int)rc_patrol_msg->data<5){
+          rc_patrol_msg->data+=1;
+        }else{
+          rc_patrol_msg->data=0;
+        }
+        for (size_t i = 0; i < 5; i++)
+        {
+          rc_partol_pub->publish(rc_patrol_msg);
+        }
+        
+      }
     }
     
+  }
+}
+void sing_melody(){
+    int melody[] = {
+      // NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4
+      NOTE_G3, NOTE_C4, NOTE_D4, NOTE_E4, NOTE_D4, NOTE_C4, NOTE_C4
+    };
+
+    // note durations: 4 = quarter note, 8 = eighth note, etc.:
+    int noteDurations[] = {
+      16, 16, 16, 16, 8, 16, 16
+    };
+  for (int thisNote = 0; thisNote < 8; thisNote++) {
+
+    // to calculate the note duration, take one second
+    // divided by the note type.
+    //e.g. quarter note = 1000 / 4, eighth note = 1000/8, etc.
+    int noteDuration = 2000 / noteDurations[thisNote];
+    tone(BDPIN_BUZZER, melody[thisNote], noteDuration);
+
+    // to distinguish the notes, set a minimum time between them.
+    // the note's duration + 30% seems to work well:
+    int pauseBetweenNotes = noteDuration * 1.30;
+    delay(pauseBetweenNotes);
+    // stop the tone playing:
+    noTone(BDPIN_BUZZER);
   }
 }
 #endif

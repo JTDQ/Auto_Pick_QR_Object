@@ -526,7 +526,6 @@ bool OpenManipulatorDriver::writeJointPosition(double *set_data)
     DEBUG_SERIAL.println(log);
     DEBUG_SERIAL.println("Failed to sync write position");
   }
-
   return true;
 }
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+#-*- codinig: UTF-8 -*-
 #from launch_demo import launch_demo
 import rospy
 
@@ -13,12 +14,31 @@ import tf
 from std_srvs.srv import SetBool
 import os
 import time
+import re
+import subprocess
+
 class navigation_demo:
-    def __init__(self):
+    def __init__(self,pos):
         self.set_pose_pub = rospy.Publisher('/initialpose', PoseWithCovarianceStamped, queue_size=5)
 
         self.move_base = actionlib.SimpleActionClient("move_base", MoveBaseAction)
         self.move_base.wait_for_server(rospy.Duration(60))
+        print(pos)
+        self.init_pose_from_tf(pos)
+
+    def init_pose_from_tf(self,pos):
+        
+        pose = PoseWithCovarianceStamped()
+        pose.header.stamp = rospy.Time.now()
+        pose.header.frame_id = 'map'
+        pose.pose.pose.position.x = pos[0][0]
+        pose.pose.pose.position.y = pos[0][1]
+        # q = transformations.quaternion_from_euler(0.0, 0.0, th/180.0*pi)
+        pose.pose.pose.orientation.x = pos[1][0]
+        pose.pose.pose.orientation.y = pos[1][1]
+        pose.pose.pose.orientation.z = pos[1][2]
+        pose.pose.pose.orientation.w = pos[1][3]
+        self.set_pose_pub.publish(pose)
 
     def set_pose(self, p):  
         if self.move_base is None:
@@ -47,7 +67,8 @@ class navigation_demo:
         rospy.loginfo("[Navi] navigation has be actived")
 
     def _feedback_cb(self, feedback):
-        rospy.loginfo("[Navi] navigation feedback\r\n%s"%feedback)
+        # rospy.loginfo("[Navi] navigation feedback\r\n%s"%feedback)
+        pass
 
     def goto(self, p):
         rospy.loginfo("[Navi] goto %s"%p)
@@ -113,6 +134,7 @@ class Rc100_service:
         rospy.Service('rc_100_service',SetBool,self.rc_serv)
         self.cnt=0
     def rc_serv(self,date):
+
         if self.cnt >3:
             print (self.poseList)
             return [False,'efg']
@@ -130,10 +152,31 @@ class Rc100_service:
                 continue
         return [True,'abc']
         # pose=self.listener.lookupTransform('/map','/base_link',)
+def start_navigation(rc_s):
 
-if __name__ == "__main__":
-    os.system("gnome-terminal -e 'roslaunch turtlebot3_slam turtlebot3_slam.launch'")
+    listener=tf.TransformListener()
+    listener.waitForTransform("map", "base_footprint", rospy.Time(), rospy.Duration(4.0))
+    pos = listener.lookupTransform('map', 'base_footprint', rospy.Time(0))
+    p3=subprocess.Popen("rosnode kill /turtlebot3_slam_gmapping",shell=True,stdout=subprocess.PIPE)
+    p5=subprocess.Popen("rosnode kill /move_base",shell=True,stdout=subprocess.PIPE)
     time.sleep(5)
+
+
+    # p.wait()            
+    p4=subprocess.Popen("roslaunch turtlebot3_navigation turtlebot3_navigation.launch open_rviz:=true map_file:=/home/sc/map.yaml",shell=True,stdout=subprocess.PIPE)
+    # p4.wait()
+    time.sleep(10)
+    navi = navigation_demo(pos)
+    # navi.set_pose(init_pose)
+    while True:
+        for pose in rc_s.poseList:
+            navi.goto_array(pose)
+if __name__ == "__main__":
+    # os.system("gnome-terminal -e 'roslaunch turtlebot3_slam turtlebot3_slam.launch open_rviz:=false'")
+    # time.sleep(5)
+
+    p1=subprocess.Popen("roslaunch turtlebot3_slam turtlebot3_slam.launch open_rviz:=true",shell=True,stdout=subprocess.PIPE)
+    # p.wait()           
 
     rospy.init_node('navigation_demo',anonymous=True)
     goalListX = rospy.get_param('~goalListX', '2.0, 2.0')
@@ -145,18 +188,29 @@ if __name__ == "__main__":
     r.sleep()
     while not rospy.is_shutdown():
         if rc_s.cnt>3:
-            # os.system("gnome-terminal -e 'roslaunch turtlebot3_bringup turtlebot3_robot.launch'")
-            os.system("gnome-terminal -e 'rosrun map_server map_saver -f /home/sc/map.yaml'")
-            time.sleep(10)
-            os.system("gnome-terminal -e 'rosnode kill /turtlebot3_slam_gmapping'")
-            time.sleep(3)
-            os.system("gnome-terminal -e 'roslaunch turtlebot3_navigation turtlebot3_navigation.launch map_file:=/home/sc/map.yaml'")
-            time.sleep(10)
-            navi = navigation_demo()
-
-            while True:
-                for pose in rc_s.poseList:
-                    navi.goto_array(pose)
+            
+            for i in range(3):
+                p2=subprocess.Popen("rosrun map_server map_saver -f /home/sc/map",shell=True,stdout=subprocess.PIPE)
+                print('-----------------------')
+                p2.wait()
+                std_out_s=p2.communicate()
+                m=re.search('Done',std_out_s[0])
+                print (std_out_s[0])
+                # print(m.group())
+                if m is not None:
+                    print ('get done')
+                    break
+                else:
+                    print('fail ...')
+            # time.sleep(10)
+            
+            # os.system("gnome-terminal -e 'rosnode kill /turtlebot3_slam_gmapping'")
+            # time.sleep(3)
+            # os.system("gnome-terminal -e 'roslaunch turtlebot3_navigation turtlebot3_navigation.launch open_rviz:=false map_file:=/home/sc/map.yaml '")
+            # time.sleep(10)
+            # here to store map transform to base_footprint
+            start_navigation(rc_s)
+            
 
             while not rospy.is_shutdown():
                 r.sleep()

@@ -26,6 +26,7 @@
 #include <std_msgs/Int32.h>
 #include <std_msgs/Float64.h>
 #include <std_msgs/Float64MultiArray.h>
+
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/JointState.h>
 #include <sensor_msgs/BatteryState.h>
@@ -35,7 +36,6 @@
 #include <tf/tf.h>
 #include <tf/transform_broadcaster.h>
 #include <nav_msgs/Odometry.h>
-
 #include <turtlebot3_msgs/SensorState.h>
 #include <turtlebot3_msgs/Sound.h>
 #include <turtlebot3_msgs/VersionInfo.h>
@@ -44,7 +44,7 @@
 #include <RC100.h>
 #include "turtlebot3_with_open_manipulator.h"
 #include "remote_controller.h"
-
+#include "pitches.h"
 #include <math.h>
 
 #define FIRMWARE_VER "2.0.1"
@@ -194,6 +194,21 @@ ros::Publisher battery_state_pub("battery_state", &battery_state_msg);
 // Magnetic field
 sensor_msgs::MagneticField mag_msg;
 ros::Publisher mag_pub("magnetic_field", &mag_msg);
+
+// controller
+std_msgs::Int32 rc_patrol_msg;
+ros::Publisher rc_partol_pub("rc_partol_cmd",&rc_patrol_msg);
+
+// RC100 rc100;
+// double grip_value = 0.0;
+void sing_melody();
+void fromRC100(OpenManipulatorDriver* open_manipulator,float *goal_velocity_from_rc100, uint16_t data,ros::Publisher* rc_partol_pub,std_msgs::Int32* rc_patrol_msg);
+void connectRC100();
+uint16_t readRC100Data();
+int availableRC100();
+
+
+
 
 /*******************************************************************************
 * Transform Broadcaster
