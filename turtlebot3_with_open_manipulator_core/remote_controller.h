@@ -57,6 +57,7 @@ void fromRC100(OpenManipulatorDriver* open_manipulator,float *goal_velocity_from
   // }
   //void RobotisManipulator::makeJointTrajectoryFromPresentPosition(std::vector<double> delta_goal_joint_position, double move_time, std::vector<JointValue> present_joint_value)
   double pose[]={0.0, 0.0, 0.0, 0.0, 0.0};
+  static uint32_t last_partol_time=0;
 
   if (!(data & RC100_BTN_6)) {
     if (data & RC100_BTN_L){
@@ -110,9 +111,7 @@ void fromRC100(OpenManipulatorDriver* open_manipulator,float *goal_velocity_from
       pose[4]=-0.02;
       open_manipulator->currentBasedPos(pose);
     }else if((data&RC100_BTN_1)){
-      static uint32_t last_partol_time=0;
       uint32_t t = millis();
-      
       if(t-last_partol_time>5000){
         sing_melody();
         last_partol_time=t;
@@ -122,6 +121,23 @@ void fromRC100(OpenManipulatorDriver* open_manipulator,float *goal_velocity_from
         }else{
           rc_patrol_msg->data=0;
         }
+        for (size_t i = 0; i < 5; i++)
+        {
+          rc_partol_pub->publish(rc_patrol_msg);
+        }
+      }
+    }else if((data & RC100_BTN_3)){
+      uint32_t t = millis();
+      if(t-last_partol_time>5000){
+        sing_melody();
+        last_partol_time=t;
+        rc_patrol_msg->data=5;
+        for (size_t i = 0; i < 5; i++)
+        {
+          rc_partol_pub->publish(rc_patrol_msg);
+        }
+        delay(3000);
+        rc_patrol_msg->data=-1;
         for (size_t i = 0; i < 5; i++)
         {
           rc_partol_pub->publish(rc_patrol_msg);

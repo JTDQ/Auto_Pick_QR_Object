@@ -12,10 +12,21 @@ from tf_conversions import transformations
 from math import pi
 import tf
 from std_srvs.srv import SetBool
+from std_msgs.msg import Int32
 import os
 import time
 import re
 import subprocess
+from std_srvs.srv import Trigger
+
+def main():
+    rospy.wait_for_service('test')
+    try:
+        val = rospy.ServiceProxy('test', Trigger)
+        resp1 = val(False)
+        print resp1.success, resp1.message
+    except rospy.ServiceException, e:
+        print e
 
 class navigation_demo:
     def __init__(self,pos):
@@ -131,8 +142,59 @@ class Rc100_service:
         # rospy.Service.
         self.listener=tf.TransformListener()
         self.poseList=[]
+        rospy.Subscriber('rc_partol_cmd',Int32,self.rc_call_back)
         rospy.Service('rc_100_service',SetBool,self.rc_serv)
         self.cnt=0
+        self.old_msg=-10
+        self.stop_partol=False
+
+    def rc_call_back(self,msg):
+        if msg.data==self.old_msg:
+            return
+        else:
+            self.old_msg=msg.data
+            if msg.data==0:
+                p1=subprocess.Popen("roslaunch turtlebot3_slam turtlebot3_slam.launch open_rviz:=true",shell=True,stdout=subprocess.PIPE)
+            elif msg.data>=1 and msg.data<=3:
+                while True:
+                    try:
+                        # (trans,rot) = self.listener.lookupTransform('/map', '/base_link', rospy.Time(0))
+                        pose= self.listener.lookupTransform('/map', '/base_link', rospy.Time(0))
+                        self.poseList.append(pose)
+                        rospy.loginfo("get_on")
+                        self.cnt+=1
+                        break
+                    except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+                        rospy.loginfo('no no ')
+                        time.sleep(1)
+                        continue
+            elif msg.data==4:
+                self.stop_partol=False
+                while self.stop_partol==False:
+                    for i in range(3):
+                        p2=subprocess.Popen("rosrun map_server map_saver -f /home/sc/map",shell=True,stdout=subprocess.PIPE)
+                        print('-----------------------')
+                        p2.wait()
+                        std_out_s=p2.communicate()
+                        m=re.search('Done',std_out_s[0])
+                        print (std_out_s[0])
+                        # print(m.group())
+                        if m is not None:
+                            print ('get done')
+                            break
+                        else:
+                            print('fail ...')
+                    start_navigation(rc_s)
+                    while not rospy.is_shutdown():
+                        r.sleep()
+            elif msg.data==5:
+                self.stop_partol=True
+                p3=subprocess.Popen("rosnode kill /turtlebot3_slam_gmapping",shell=True,stdout=subprocess.PIPE)
+                p5=subprocess.Popen("rosnode kill /move_base",shell=True,stdout=subprocess.PIPE)
+                time.sleep(5)
+
+
+
     def rc_serv(self,date):
 
         if self.cnt >3:
@@ -175,7 +237,6 @@ if __name__ == "__main__":
     # os.system("gnome-terminal -e 'roslaunch turtlebot3_slam turtlebot3_slam.launch open_rviz:=false'")
     # time.sleep(5)
 
-    p1=subprocess.Popen("roslaunch turtlebot3_slam turtlebot3_slam.launch open_rviz:=true",shell=True,stdout=subprocess.PIPE)
     # p.wait()           
 
     rospy.init_node('navigation_demo',anonymous=True)
@@ -202,16 +263,7 @@ if __name__ == "__main__":
                     break
                 else:
                     print('fail ...')
-            # time.sleep(10)
-            
-            # os.system("gnome-terminal -e 'rosnode kill /turtlebot3_slam_gmapping'")
-            # time.sleep(3)
-            # os.system("gnome-terminal -e 'roslaunch turtlebot3_navigation turtlebot3_navigation.launch open_rviz:=false map_file:=/home/sc/map.yaml '")
-            # time.sleep(10)
-            # here to store map transform to base_footprint
             start_navigation(rc_s)
-            
-
             while not rospy.is_shutdown():
                 r.sleep()
     rospy.spin()
