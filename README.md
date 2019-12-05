@@ -162,3 +162,17 @@ $ rosrun camera_calibration cameracalibrator.py --size 8x6 --square 0.03 image:=
 
 [ INFO] [1555832606.313276288]: camera calibration URL: [file:///home/sc/.ros/camera_info/head_camera.yaml
 ](file://home\sc\.ros\camera_info\head_camera.yaml)
+
+
+
+# 巡航包
+
+运行方法：
+
+```
+roslaunch 
+roslaunch auto_pick_sc n_points.launch
+
+```
+
+ 更改了手柄按键ctrl+1 2 3 4，分别对应“重置”，“SLAM”，‘记录点’，“导航” 
