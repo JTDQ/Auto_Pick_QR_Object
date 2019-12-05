@@ -1,6 +1,7 @@
 /*******************************************************************************
 * sanchuan dao ci yiyou
-* 2019-11-28
+2019-12-05
+2019-11-28
 * remote control service
 * Copyright 2018 ROBOTIS CO., LTD.
 *
@@ -351,7 +352,7 @@ void getData(uint32_t wait_time)
     case 0:
       if (rc100_state)
       {
-        fromRC100(&manipulator_driver,goal_velocity_from_rc100, get_rc100_data,&rc_partol_pub,&rc_patrol_msg);
+        fromRC100(&manipulator_driver,goal_velocity_from_rc100, goal_velocity_from_cmd,get_rc100_data,&rc_partol_pub,&rc_patrol_msg);
         tick = millis();
         state = 1;
       }
@@ -1102,125 +1103,3 @@ void sendDebuglog(void)
   DEBUG_SERIAL.print("         y : "); DEBUG_SERIAL.println(odom_pose[1]);
   DEBUG_SERIAL.print("     theta : "); DEBUG_SERIAL.println(odom_pose[2]);
 }
-
-/*
-void connectRC100()
-{
-  rc100.begin(1);
-}
-
-int availableRC100()
-{
-  return rc100.available();
-}
-
-uint16_t readRC100Data()
-{
-  return rc100.readData();
-}
-
-void fromRC100(OpenManipulatorDriver* open_manipulator,float *goal_velocity_from_rc100, uint16_t data,ros::Publisher* rc_partol_pub,std_msgs::Int32* rc_patrol_msg)
-{
-  // if(data!=old_data){
-  //   old_data=data;
-  //   return;
-  // }
-  //void RobotisManipulator::makeJointTrajectoryFromPresentPosition(std::vector<double> delta_goal_joint_position, double move_time, std::vector<JointValue> present_joint_value)
-  double pose[]={0.0, 0.0, 0.0, 0.0, 0.0};
-
-  if (!(data & RC100_BTN_6)) {
-    if (data & RC100_BTN_L){
-      pose[0]=5*DEG2RAD;
-      open_manipulator->currentBasedPos(pose);
-    }
-    else if (data & RC100_BTN_R){
-      pose[0]=-5*DEG2RAD;
-      open_manipulator->currentBasedPos(pose);
-    }else if (data & RC100_BTN_D){
-      pose[1]=-5*DEG2RAD;
-      open_manipulator->currentBasedPos(pose);
-    }else if (data & RC100_BTN_U){
-      pose[1]=5*DEG2RAD;
-      open_manipulator->currentBasedPos(pose);
-    }else if (data & RC100_BTN_3){
-      pose[2]=5*DEG2RAD;
-      open_manipulator->currentBasedPos(pose);
-    }else if (data & RC100_BTN_1){
-      pose[2]=-5*DEG2RAD;
-      open_manipulator->currentBasedPos(pose);
-    }else if (data & RC100_BTN_4)
-    {
-      pose[3]=5*DEG2RAD;
-      open_manipulator->currentBasedPos(pose);
-    }else if (data & RC100_BTN_2)
-    {
-      pose[3]=-5*DEG2RAD;
-      open_manipulator->currentBasedPos(pose);
-    }else if(data & RC100_BTN_5){
-      goal_velocity_from_rc100[0]=0;
-      goal_velocity_from_rc100[1]=0;
-    }
-  } else {
-    // float goal_velocity_from_rc100[WHEEL_NUM] = {0.0, 0.0};
-    if (data & RC100_BTN_U)
-      goal_velocity_from_rc100[0]=0.2;
-    else if (data & RC100_BTN_D)
-      goal_velocity_from_rc100[0]=-0.2;      
-    else if (data & RC100_BTN_L)
-      goal_velocity_from_rc100[1]=0.2;
-    else if (data & RC100_BTN_R)
-      goal_velocity_from_rc100[1]=-0.2;
-    else if(data & RC100_BTN_5){
-      goal_velocity_from_rc100[0]=0;
-      goal_velocity_from_rc100[1]=0;
-    }else if(data & RC100_BTN_2){
-      pose[4]=0.02;
-      open_manipulator->currentBasedPos(pose);
-    }else if(data & RC100_BTN_4){
-      pose[4]=-0.02;
-      open_manipulator->currentBasedPos(pose);
-    }else if((data&RC100_BTN_1)){
-      sing_melody();
-      static uint32_t last_partol_time=0;
-      uint32_t t = millis();
-      
-      if(t-last_partol_time>5000){
-        last_partol_time=t;
-        // mag_pub.publish(&mag_msg);
-        if((int)rc_patrol_msg->data<5){
-          rc_patrol_msg->data+=1;
-        }else{
-          rc_patrol_msg->data=0;
-        }
-        rc_partol_pub->publish(rc_patrol_msg);
-      }
-    }
-    
-  }
-}
-void sing_melody(){
-    int melody[] = {
-      NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4
-    };
-
-    // note durations: 4 = quarter note, 8 = eighth note, etc.:
-    int noteDurations[] = {
-      4, 8, 8, 4, 4, 4, 4, 4
-    };
-  for (int thisNote = 0; thisNote < 8; thisNote++) {
-
-    // to calculate the note duration, take one second
-    // divided by the note type.
-    //e.g. quarter note = 1000 / 4, eighth note = 1000/8, etc.
-    int noteDuration = 1000 / noteDurations[thisNote];
-    tone(BDPIN_BUZZER, melody[thisNote], noteDuration);
-
-    // to distinguish the notes, set a minimum time between them.
-    // the note's duration + 30% seems to work well:
-    int pauseBetweenNotes = noteDuration * 1.30;
-    delay(pauseBetweenNotes);
-    // stop the tone playing:
-    noTone(BDPIN_BUZZER);
-  }
-}
-*/

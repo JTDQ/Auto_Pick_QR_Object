@@ -7,7 +7,7 @@ import actionlib
 from actionlib_msgs.msg import *
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from nav_msgs.msg import Path
-from geometry_msgs.msg import PoseWithCovarianceStamped
+from geometry_msgs.msg import PoseWithCovarianceStamped,Twist
 from tf_conversions import transformations
 from math import pi
 import tf
@@ -18,6 +18,8 @@ import time
 import re
 import subprocess
 from std_srvs.srv import Trigger
+import threading
+import json
 
 def main():
     rospy.wait_for_service('test')
@@ -141,40 +143,62 @@ class Rc100_service:
     def __init__(self):
         # rospy.Service.
         self.listener=tf.TransformListener()
-        self.poseList=[]
+        # self.poseList=[]
+        self.cruisePose=CruisePose()
         rospy.Subscriber('rc_partol_cmd',Int32,self.rc_call_back)
-        rospy.Service('rc_100_service',SetBool,self.rc_serv)
+        self.velCmdPub=rospy.Publisher('cmd_vel',Twist,queue_size=5)
+        # rospy.Service('rc_100_service',SetBool,self.rc_serv)
         self.cnt=0
         self.old_msg=-10
         self.stop_partol=False
-
+        self.oldTime=rospy.Time.now()
+    def __del__(self):
+        self.cruisePose.savePose()
+        rospy.logerr('... after saveing pose and out...')
     def rc_call_back(self,msg):
-        if msg.data==self.old_msg:
+        
+        if msg.data==self.old_msg and rospy.Time.now()-self.oldTime<rospy.Duration(1):
             return
         else:
+            self.oldTime=rospy.Time.now()
             self.old_msg=msg.data
-            if msg.data==0:
+            if msg.data==1:
+                self.stop_partol=True
+                
+                p3=subprocess.Popen("rosnode kill /turtlebot3_slam_gmapping",shell=True,stdout=subprocess.PIPE)
+                p5=subprocess.Popen("rosnode kill /move_base",shell=True,stdout=subprocess.PIPE)
+                tw=Twist()
+                tw.linear.x=0
+                tw.angular.z=0
+                r = rospy.Rate(5)
+                for i in range(15):
+                    self.velCmdPub.publish(tw)
+                    r.sleep()
+
+            elif msg.data==2:
                 p1=subprocess.Popen("roslaunch turtlebot3_slam turtlebot3_slam.launch open_rviz:=true",shell=True,stdout=subprocess.PIPE)
-            elif msg.data>=1 and msg.data<=3:
+                self.cruisePose.cruisePoseList=[]
+            elif msg.data==3:    
                 while True:
                     try:
                         # (trans,rot) = self.listener.lookupTransform('/map', '/base_link', rospy.Time(0))
                         pose= self.listener.lookupTransform('/map', '/base_link', rospy.Time(0))
-                        self.poseList.append(pose)
+                        self.cruisePose.cruisePoseList.append(pose)
                         rospy.loginfo("get_on")
                         self.cnt+=1
                         break
                     except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
-                        rospy.loginfo('no no ')
+                        rospy.loginfo('there is no map transfrom ')
                         time.sleep(1)
                         continue
-            elif msg.data==4:
-                self.stop_partol=False
-                while self.stop_partol==False:
+                print(self.cruisePose.cruisePoseList)
+                if len(self.cruisePose.cruisePoseList)>=3:
+                    # self.cruisePose.savePose()
                     for i in range(3):
                         p2=subprocess.Popen("rosrun map_server map_saver -f /home/sc/map",shell=True,stdout=subprocess.PIPE)
                         print('-----------------------')
-                        p2.wait()
+                        # p2.wait()
+                        time.sleep(3)
                         std_out_s=p2.communicate()
                         m=re.search('Done',std_out_s[0])
                         print (std_out_s[0])
@@ -184,86 +208,64 @@ class Rc100_service:
                             break
                         else:
                             print('fail ...')
-                    start_navigation(rc_s)
-                    while not rospy.is_shutdown():
-                        r.sleep()
-            elif msg.data==5:
-                self.stop_partol=True
-                p3=subprocess.Popen("rosnode kill /turtlebot3_slam_gmapping",shell=True,stdout=subprocess.PIPE)
-                p5=subprocess.Popen("rosnode kill /move_base",shell=True,stdout=subprocess.PIPE)
-                time.sleep(5)
+                    self.cruisePose.savePose()
+            elif msg.data==4:
+                self.stop_partol=False
+                self.cruisePose.loadPose()
+                t=threading.Thread(target=start_navigation,args=(self.cruisePose.cruisePoseList,self.cruisePose.initTfLink))
+                t.start()
+     
+class CruisePose:
+    def __init__(self):
+        self.cruisePoseList=[]
+        self.initTfLink=[]
+        self.filename='cruisePoseList.json'
+    def loadPose(self):
+        try:
+            with open(self.filename) as f_obj:
+                (self.cruisePoseList,self.initTfLink)=json.load(f_obj)
+        # except expression as identifier:
+        except :
+            # pass
+            rospy.logerr('when loading:FileNotFoundError')
+        else:
+            rospy.logerr('json load ok')
 
+            pass
 
-
-    def rc_serv(self,date):
-
-        if self.cnt >3:
-            print (self.poseList)
-            return [False,'efg']
-        while True:
-            try:
-                # (trans,rot) = self.listener.lookupTransform('/map', '/base_link', rospy.Time(0))
-                pose= self.listener.lookupTransform('/map', '/base_link', rospy.Time(0))
-                self.poseList.append(pose)
-                rospy.loginfo("get_on")
-                self.cnt+=1
-                
-                break
-            except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
-                rospy.loginfo('no no ')
-                continue
-        return [True,'abc']
-        # pose=self.listener.lookupTransform('/map','/base_link',)
-def start_navigation(rc_s):
-
-    listener=tf.TransformListener()
-    listener.waitForTransform("map", "base_footprint", rospy.Time(), rospy.Duration(4.0))
-    pos = listener.lookupTransform('map', 'base_footprint', rospy.Time(0))
+    def savePose(self):
+        listener=tf.TransformListener()
+        listener.waitForTransform("map", "base_footprint", rospy.Time(), rospy.Duration(4.0))
+        self.initTfLink = listener.lookupTransform('map', 'base_footprint', rospy.Time(0))
+        try:
+            with open(self.filename,'w') as f_obj:
+                json.dump((self.cruisePoseList,self.initTfLink),f_obj)
+        except :
+            rospy.logerr('when saving:FileNotFoundError')
+            pass
+        else:
+            rospy.logerr('json save ok')
+def start_navigation(cruisePoseList,pos):
     p3=subprocess.Popen("rosnode kill /turtlebot3_slam_gmapping",shell=True,stdout=subprocess.PIPE)
     p5=subprocess.Popen("rosnode kill /move_base",shell=True,stdout=subprocess.PIPE)
     time.sleep(5)
-
-
     # p.wait()            
     p4=subprocess.Popen("roslaunch turtlebot3_navigation turtlebot3_navigation.launch open_rviz:=true map_file:=/home/sc/map.yaml",shell=True,stdout=subprocess.PIPE)
     # p4.wait()
     time.sleep(10)
+
     navi = navigation_demo(pos)
     # navi.set_pose(init_pose)
     while True:
-        for pose in rc_s.poseList:
+        for pose in cruisePoseList:
             navi.goto_array(pose)
 if __name__ == "__main__":
-    # os.system("gnome-terminal -e 'roslaunch turtlebot3_slam turtlebot3_slam.launch open_rviz:=false'")
-    # time.sleep(5)
-
-    # p.wait()           
-
     rospy.init_node('navigation_demo',anonymous=True)
-    goalListX = rospy.get_param('~goalListX', '2.0, 2.0')
-    goalListY = rospy.get_param('~goalListY', '2.0, 4.0')
-    goalListYaw = rospy.get_param('~goalListYaw', '0, 90.0')
-    goals = [[float(x), float(y), float(yaw)] for (x, y, yaw) in zip(goalListX.split(","),goalListY.split(","),goalListYaw.split(","))]
+    # goalListX = rospy.get_param('~goalListX', '2.0, 2.0')
+    # goalListY = rospy.get_param('~goalListY', '2.0, 4.0')
+    # goalListYaw = rospy.get_param('~goalListYaw', '0, 90.0')
+    # goals = [[float(x), float(y), float(yaw)] for (x, y, yaw) in zip(goalListX.split(","),goalListY.split(","),goalListYaw.split(","))]
     rc_s=Rc100_service()
     r = rospy.Rate(1)
     r.sleep()
-    while not rospy.is_shutdown():
-        if rc_s.cnt>3:
-            
-            for i in range(3):
-                p2=subprocess.Popen("rosrun map_server map_saver -f /home/sc/map",shell=True,stdout=subprocess.PIPE)
-                print('-----------------------')
-                p2.wait()
-                std_out_s=p2.communicate()
-                m=re.search('Done',std_out_s[0])
-                print (std_out_s[0])
-                # print(m.group())
-                if m is not None:
-                    print ('get done')
-                    break
-                else:
-                    print('fail ...')
-            start_navigation(rc_s)
-            while not rospy.is_shutdown():
-                r.sleep()
     rospy.spin()
