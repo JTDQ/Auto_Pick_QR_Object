@@ -1,0 +1,35 @@
+<launch>
+
+  <arg name="marker_size" default="4.3"/>
+
+  <arg name="max_new_marker_error" default="0.05" />
+
+  <arg name="max_track_error" default="0.05" />
+
+  <arg name="cam_image_topic" default="/raspicam_node/camera_raw" />
+
+  <arg name="cam_info_topic" default="/raspicam_node/camera_info" />
+  <arg name="output_frame" default="/map" />
+  <node name="republish" type="republish" pkg="image_transport" output="screen" args="compressed in:=/raspicam_node/image raw out:=raspicam_node/camera_raw" />
+
+  <node pkg ="tf2_ros" type ="static_transform_publisher" name ="map_camera" args ="0.07 0 0.05 -1.57 0 -1.57 /map /camera"/>
+  <group ns="om_with_tb3">
+    <node name="ar_track_alvar" pkg="ar_track_alvar" type="individualMarkersNoKinect" respawn="false" output="screen">
+
+      <param name="marker_size" type="double" value="$(arg marker_size)" />
+
+      <param name="max_new_marker_error" type="double" value="$(arg max_new_marker_error)" />
+
+      <param name="max_track_error" type="double" value="$(arg max_track_error)" />
+
+      <param name="output_frame" type="string" value="$(arg output_frame)" />
+
+      <remap from="camera_image" to="$(arg cam_image_topic)" />
+
+      <remap from="camera_info" to="$(arg cam_info_topic)" />
+
+    </node>
+  </group>
+
+
+</launch>

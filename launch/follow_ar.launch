@@ -1,17 +1,19 @@
 <launch>
-<!--
+	<!--
 	<include file="$(find auto_pick_sc)/launch/sc_task_controller.launch"/>
 -->
+	<arg name="camera_type" default="jetson" doc="camera type [usb, raspi, jetson]"/>
+	
 	<group ns="om_with_tb3">
-		<include file="$(find auto_pick_sc)/launch/usb_cam_ar_tracker.launch"/>
-		<include file="$(find turtlebot3_bringup)/launch/turtlebot3_robot.launch">
-			
+		<include file="$(find auto_pick_sc)/launch/ar_tracker_$(arg camera_type).launch"/>
+		
+		<include file="$(find turtlebot3_bringup)/launch/turtlebot3_robot.launch" if="$(eval arg('camera_type')!='raspi')">
 			<arg name="multi_robot_name" value="om_with_tb3"/>
-			<arg name="set_lidar_frame_id" value="om_with_tb3/base_scan"/>				
+			<arg name="set_lidar_frame_id" value="om_with_tb3/base_scan"/>
 		</include>
 	</group>
 	<include file="$(find open_manipulator_with_tb3_tools)/launch/manipulation.launch">
 		<arg name="use_platform" value="true"/>
-		<arg name="open_rviz"              default="false"  />
+		<arg name="open_rviz" default="false" />
 	</include>
 </launch>

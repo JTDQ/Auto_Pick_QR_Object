@@ -52,10 +52,10 @@ roslaunch auto_pick_sc sc_task_controller.launch
 然后在远程PC上运行
 
 ```shell
-# turtlebot3，机械臂moveit，ar_tracker
-roslaunch auto_pick_sc follow_ar.launch
-# 任务控制节点
-roslaunch auto_pick_sc sc_task_controller.launch
+# 启动相机、turtlebot3、机械臂moveit、ar_tracker
+$ roslaunch auto_pick_sc follow_ar.launch camera_type:=usb
+# 启动’任务树管理‘节点
+$ roslaunch auto_pick_sc sc_task_controller.launch
 ```
 
 #### 方案三：如果你是用JetsonTX2 自带的CSI
@@ -65,19 +65,21 @@ roslaunch auto_pick_sc sc_task_controller.launch
 > **Note:** This package was tested on a Nvidia Jetson TX2 with L4T R27.1, ROS Kinetic, and the [Leopard Imaging IMX377CS](https://www.leopardimaging.com/LI-JETSON-KIT-IMX377CS-X.html) CSI camera.
 ```shell
 # 下载
-cd ~/catkin_ws/src
-
-git clone https://github.com/peter-moran/jetson_csi_cam.git
+$ cd ~/catkin_ws/src
+$ git clone https://github.com/peter-moran/jetson_csi_cam.git
 
 # 编译
-cd ~/catkin_ws/
-catkin_make
-# 运行
-roslaunch auto_pick_sc jetson_cam_ar_tracker.launch
-# 任务控制节点
-roslaunch auto_pick_sc sc_task_controller.launch
+$ cd ~/catkin_ws/
+$ catkin_make
 ```
+运行
 
+```shell
+# 启动相机、turtlebot3、机械臂moveit、ar_tracker
+$ roslaunch auto_pick_sc follow_ar.launch camera_type:=jetson
+# 启动’任务树管理‘节点
+$ roslaunch auto_pick_sc sc_task_controller.launch
+```
 
 # 3、移动抓取包内文件解释
 
