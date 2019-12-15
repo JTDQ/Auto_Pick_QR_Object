@@ -2,6 +2,8 @@
 
 # 京天例程：自动跟随二维码并抓取
 
+[TOC]
+
 # 1、配置安装准备
 
 ### A、配置Ubuntu，ros kinetic，turtlebot3
@@ -24,7 +26,7 @@ catkin_make
 
 复制 文件夹内相机标定文件`head_camera.yaml`文件到`/home/sc/.ros/camera_info/head_camera.yaml`.
 
-### C、运行
+### C、运行 (根据相机是‘树莓派相机、USB相机、JetsonTx2的Csi相机，选择)
 
 #### 方案一，如果你用的是树莓派相机，
 
@@ -45,7 +47,7 @@ roslaunch auto_pick_sc raspicamera_ar_tracker.launch
 roslaunch auto_pick_sc sc_task_controller.launch
 ```
 
-#### 方案二，如果你是用usb相机
+#### 方案二：如果你是用usb相机
 
 然后在远程PC上运行
 
@@ -56,6 +58,25 @@ roslaunch auto_pick_sc follow_ar.launch
 roslaunch auto_pick_sc sc_task_controller.launch
 ```
 
+#### 方案三：如果你是用JetsonTX2 自带的CSI
+
+需要安装TX2板载csi相机的驱动`gscam`  
+> If you'd like to learn more about `gscam`, check out their [ROS wiki page](http://wiki.ros.org/gscam) or their [Github repository](https://github.com/ros-drivers/gscam).  
+> **Note:** This package was tested on a Nvidia Jetson TX2 with L4T R27.1, ROS Kinetic, and the [Leopard Imaging IMX377CS](https://www.leopardimaging.com/LI-JETSON-KIT-IMX377CS-X.html) CSI camera.
+```shell
+# 下载
+cd ~/catkin_ws/src
+
+git clone https://github.com/peter-moran/jetson_csi_cam.git
+
+# 编译
+cd ~/catkin_ws/
+catkin_make
+# 运行
+roslaunch auto_pick_sc jetson_cam_ar_tracker.launch
+# 任务控制节点
+roslaunch auto_pick_sc sc_task_controller.launch
+```
 
 
 # 3、移动抓取包内文件解释

@@ -20,7 +20,8 @@ import subprocess
 from std_srvs.srv import Trigger
 import threading
 import json
-
+# import pyttsx
+IS_OPEN_RVIZ="false"
 def main():
     rospy.wait_for_service('test')
     try:
@@ -32,8 +33,8 @@ def main():
 
 class navigation_demo:
     def __init__(self,pos):
-        self.set_pose_pub = rospy.Publisher('/initialpose', PoseWithCovarianceStamped, queue_size=5)
 
+        self.set_pose_pub = rospy.Publisher('/initialpose', PoseWithCovarianceStamped, queue_size=5)
         self.move_base = actionlib.SimpleActionClient("move_base", MoveBaseAction)
         self.move_base.wait_for_server(rospy.Duration(60))
         print(pos)
@@ -148,6 +149,10 @@ class Rc100_service:
         rospy.Subscriber('rc_partol_cmd',Int32,self.rc_call_back)
         self.velCmdPub=rospy.Publisher('cmd_vel',Twist,queue_size=5)
         # rospy.Service('rc_100_service',SetBool,self.rc_serv)
+        #self.voice_engine=pyttsx.init()
+        #self.voice_engine.setProperty('rate',self.voice_engine.getProperty('rate')-50)
+        #self.voice_engine.say("Hello, I'm T B three")
+        #self.voice_engine.runAndWait()
         self.cnt=0
         self.old_msg=-10
         self.stop_partol=False
@@ -157,16 +162,19 @@ class Rc100_service:
         rospy.logerr('... after saveing pose and out...')
     def rc_call_back(self,msg):
         
-        if msg.data==self.old_msg and rospy.Time.now()-self.oldTime<rospy.Duration(1):
+        if (msg.data==self.old_msg and msg.data!=3) or (msg.data ==3 and rospy.Time.now()-self.oldTime<rospy.Duration(5)):
             return
         else:
             self.oldTime=rospy.Time.now()
             self.old_msg=msg.data
             if msg.data==1:
+                #self.voice_engine.say("reset")
+                #self.voice_engine.runAndWait()
                 self.stop_partol=True
-                
                 p3=subprocess.Popen("rosnode kill /turtlebot3_slam_gmapping",shell=True,stdout=subprocess.PIPE)
                 p5=subprocess.Popen("rosnode kill /move_base",shell=True,stdout=subprocess.PIPE)
+                #self.voice_engine.say("killed")
+                #self.voice_engine.runAndWait()
                 tw=Twist()
                 tw.linear.x=0
                 tw.angular.z=0
@@ -176,40 +184,55 @@ class Rc100_service:
                     r.sleep()
 
             elif msg.data==2:
-                p1=subprocess.Popen("roslaunch turtlebot3_slam turtlebot3_slam.launch open_rviz:=true",shell=True,stdout=subprocess.PIPE)
+                #self.voice_engine.say("2")
+                #self.voice_engine.runAndWait()
+                p1=subprocess.Popen("roslaunch turtlebot3_slam turtlebot3_slam.launch open_rviz:="+IS_OPEN_RVIZ,shell=True,stdout=subprocess.PIPE)
                 self.cruisePose.cruisePoseList=[]
             elif msg.data==3:    
                 while True:
+                    cnt=0
                     try:
                         # (trans,rot) = self.listener.lookupTransform('/map', '/base_link', rospy.Time(0))
                         pose= self.listener.lookupTransform('/map', '/base_link', rospy.Time(0))
                         self.cruisePose.cruisePoseList.append(pose)
                         rospy.loginfo("get_on")
                         self.cnt+=1
+                        #self.voice_engine.say(str(self.cnt))
+                        #self.voice_engine.runAndWait()
+
                         break
                     except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
                         rospy.loginfo('there is no map transfrom ')
-                        time.sleep(1)
+                        #self.voice_engine.say("no map")
+                        #self.voice_engine.runAndWait()
+                        cnt=cnt+1
+                        if cnt>3:
+                            break
                         continue
                 print(self.cruisePose.cruisePoseList)
                 if len(self.cruisePose.cruisePoseList)>=3:
                     # self.cruisePose.savePose()
+                    #self.voice_engine.say("save!")
+                    #self.voice_engine.runAndWait()
                     for i in range(3):
-                        p2=subprocess.Popen("rosrun map_server map_saver -f /home/sc/map",shell=True,stdout=subprocess.PIPE)
+                        p2=subprocess.Popen("rosrun map_server map_saver -f "+os.getenv('HOME')+"/map",shell=True,stdout=subprocess.PIPE)
                         print('-----------------------')
                         # p2.wait()
                         time.sleep(3)
                         std_out_s=p2.communicate()
                         m=re.search('Done',std_out_s[0])
                         print (std_out_s[0])
-                        # print(m.group())
                         if m is not None:
                             print ('get done')
+                            #self.voice_engine.say("saved")
+                            #self.voice_engine.runAndWait()
                             break
                         else:
                             print('fail ...')
                     self.cruisePose.savePose()
             elif msg.data==4:
+                #self.voice_engine.say("4 navigation!")
+                #self.voice_engine.runAndWait()
                 self.stop_partol=False
                 self.cruisePose.loadPose()
                 t=threading.Thread(target=start_navigation,args=(self.cruisePose.cruisePoseList,self.cruisePose.initTfLink))
@@ -248,9 +271,9 @@ class CruisePose:
 def start_navigation(cruisePoseList,pos):
     p3=subprocess.Popen("rosnode kill /turtlebot3_slam_gmapping",shell=True,stdout=subprocess.PIPE)
     p5=subprocess.Popen("rosnode kill /move_base",shell=True,stdout=subprocess.PIPE)
-    time.sleep(5)
+    time.sleep(3)
     # p.wait()            
-    p4=subprocess.Popen("roslaunch turtlebot3_navigation turtlebot3_navigation.launch open_rviz:=true map_file:=/home/sc/map.yaml",shell=True,stdout=subprocess.PIPE)
+    p4=subprocess.Popen("roslaunch turtlebot3_navigation turtlebot3_navigation.launch open_rviz:="+IS_OPEN_RVIZ+" map_file:="+os.getenv('HOME')+"/map.yaml",shell=True,stdout=subprocess.PIPE)
     # p4.wait()
     time.sleep(10)
 
@@ -260,6 +283,8 @@ def start_navigation(cruisePoseList,pos):
         for pose in cruisePoseList:
             navi.goto_array(pose)
 if __name__ == "__main__":
+    p4=subprocess.Popen("roslaunch turtlebot3_bringup turtlebot3_robot.launch",shell=True,stdout=subprocess.PIPE)
+
     rospy.init_node('navigation_demo',anonymous=True)
     # goalListX = rospy.get_param('~goalListX', '2.0, 2.0')
     # goalListY = rospy.get_param('~goalListY', '2.0, 4.0')
