@@ -29,6 +29,9 @@ from open_manipulator_msgs.srv import SetKinematicsPose
 from ar_track_alvar_msgs.msg import AlvarMarker
 from ar_track_alvar_msgs.msg import AlvarMarkers
 
+# macro
+goodPosition=0.24
+
 
 class getPoseOfTheObject(smach.State):
     def __init__(self):
@@ -146,7 +149,7 @@ class getCloserToGoal(smach.State):
             # rospy.logwarn('dist: %f, heading: %f, obj_func_result: %f', dist, heading, objective_function)
 
             # dist tolerance: 0.170 meter, heading tolerance: +-0.09 rad (+-5.0 deg)
-            if objective_function >= 0.210:            
+            if objective_function >= goodPosition:            
                 self.cmd_vel.linear.x  = (0.2 * dist) + (0.02 * (dist - self.priv_dist))
                 self.cmd_vel.linear.y  = 0.0 
                 self.cmd_vel.linear.z  = 0.0

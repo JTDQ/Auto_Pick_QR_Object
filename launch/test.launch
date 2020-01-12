@@ -1,0 +1,10 @@
+<launch>
+  <arg name="use_robot_name"         default="om_with_tb3"/>
+  <arg name="planning_group"         default="arm" />
+
+  <node name="place_machine" pkg="auto_pick_sc" type="place_state_mechine201.py" output="screen">
+    <param name="robot_name"  value="$(arg use_robot_name)"/>
+    <param name="planning_group"  value="$(arg planning_group)"/>
+    <param name="goal_height" value="0.15"/>
+  </node>
+</launch>
